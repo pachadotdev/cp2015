@@ -18,13 +18,11 @@ remotes::install_github("paulofelipe/cp2015")
 # remotes::install_github("paulofelipe/cp2015", build_vignettes = TRUE)
 ```
 
-### Note
+### Backend
 
-The dependency `xtensor` is no longer available on CRAN, but it can be installed directly from GitHub using the following command:
-
-```r
-devtools::install_github("xtensor-stack/Xtensor.R")
-```
+This port uses `data.table` for data preparation and result aggregation, and
+`armadillo4r`/`cpp4r` for the native numerical solver. It no longer depends on
+`dplyr`, `magrittr`, `Rcpp`, or `xtensor`.
 
 ## Example
 
@@ -33,11 +31,11 @@ This is a basic example which replicates the simulation presented in the subsect
 ```r
 library(cp2015)
 ## Data for example
-## cp2015_nafta is the data available in the package 
-data("cp2015_nafta")
+## cp2015nafta is the data available in the package 
+data("cp2015nafta")
 
 ## Simulation imposing zero aggregate deficits.
-results <- run_cp2015(data = cp2015_nafta, zero_aggregate_deficit = TRUE)
+results <- run_cp2015(data = cp2015nafta, zero_aggregate_deficit = TRUE)
 ```
 
 ### Welfare results
@@ -49,8 +47,7 @@ We have extended the welfare decomposition formula to account for the possibilit
 ```r
 # Welfare for NAFTA countries
 nafta <- c("Canada", "Mexico", "USA")
-results$welfare %>%
-  dplyr::filter(region %in% nafta)
+results$welfare[region %in% nafta]
 ```
 
 This example considers only variations in tariffs. In this way, there are no variations in technical efficiency. However, the package allows simulations that take into account changes in the iceberg trade costs.
@@ -61,7 +58,7 @@ This example considers only variations in tariffs. In this way, there are no var
 # vot = volume of trade
 # tech = technical efficiency
 
-# A tibble: 3 × 6
+# A data.table: 3 x 6
   region     tot    vot  tech welfare realwage
   <fct>    <dbl>  <dbl> <dbl>   <dbl>    <dbl>
 1 Canada -0.108  0.0443     0 -0.0638    0.323

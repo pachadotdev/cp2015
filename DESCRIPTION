@@ -1,33 +1,30 @@
 Package: cp2015
+Type: Package
 Title: Caliendo and Parro (2015) Quantitative Trade Model
 Version: 0.1.0
-Authors@R: 
-    person(given = "Paulo Felipe",
-           family = "Oliveira",
-           role = c("aut", "cre"),
-           email = "paulofel2011@gmail.com",
-           comment = c(ORCID = "0000-0002-5676-198X"))
-Description: Run simulations using Caliendo and Parro (2015) quantitative trade model.
-License: MIT + file LICENSE
+Authors@R: c(person(
+        given = "Mauricio",
+        family = "Vargas Sepulveda",
+        role = c("aut", "cre"),
+        email = "m.vargas.sepulveda@gmail.com",
+        comment = c(ORCID = "0000-0003-1017-7574")
+    ),
+    person(
+        given = "Paulo Felipe",
+        family = "Oliveira",
+        role = "aut",
+        email = "paulofel2011@gmail.com",
+        comment = c(ORCID = "0000-0002-5676-198X")
+    ))
+Description: Runs simulations using the Caliendo and Parro (2015)
+    quantitative trade model. Uses data.table for data processing and
+    armadillo4r for numerical computations.
+License: Apache License 2.0
 Encoding: UTF-8
+Depends: R (>= 4.0.0)
+Imports: data.table
 LazyData: true
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.2
-Imports: 
-    crayon,
-    dplyr,    
-    magrittr,
-    Rcpp,
-    rlang
-Depends: 
-    R (>= 2.10)
-LinkingTo: 
-    Rcpp, xtensor
-Suggests: 
-    rmarkdown,
-    knitr,
-    tidyr,
-    kableExtra,
-    testthat (>= 3.0.0)
-VignetteBuilder: knitr
-Config/testthat/edition: 3
+LinkingTo: armadillo4r, cpp4r, Matrix
+Suggests: knitr, litedown, tinytest
+NeedsCompilation: yes
+VignetteBuilder: litedown

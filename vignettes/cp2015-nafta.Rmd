@@ -1,10 +1,17 @@
 ---
-title: "Example: replicating NAFTA tariff reductions"
-output: rmarkdown::html_document
+title: "Replicating Caliendo and Parro 2015"
+output:
+  litedown::html_format:
+    options:
+      toc: true
+      number_sections: true
 vignette: >
   %\VignetteIndexEntry{Example: replicating NAFTA tariff reductions}
-  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEngine{litedown::vignette}
   %\VignetteEncoding{UTF-8}
+editor:
+  markdown:
+    wrap: sentence
 ---
 
 ```{r, include = FALSE}
@@ -14,258 +21,152 @@ knitr::opts_chunk$set(
 )
 ```
 
+# Trade and welfare effects from NAFTA's tariff reductions (section 5.1)
 
-## Intro
+This vignette uses `cp2015` to reproduce the simulation results presented in
+section 5.1 of Caliendo and Parro (2015), "Estimates of the Trade and Welfare
+Effects of NAFTA".
 
-This vignette uses the `cp2015` package to reproduce the simulation results presented in section 5.1 of the article "Estimates of the Trade and Welfare Effects of NAFTA".
-
-First, load the package: 
 ```{r setup}
 library(cp2015)
+library(data.table)
 
-## Additional packages used in this vignette
-library(kableExtra)
-library(tidyr)
-library(dplyr)
-
-# Change NA to - in kable
 options(knitr.kable.NA = "")
 ```
 
 ## Data
 
-To use the package, it is necessary to obtain data on intermediate consumption, final consumption, value added, trade and tariff data, deficits and the shape parameter of the Fréchet distribution, $\theta_j$ (also called trade elasticity).
-
-The package provides a set of data for testing and so that the user can check the required data. The `cp2015_nafta` object has the data for the NAFTA tariff reduction simulation experiment. Below, you can see the structure of the data. 
+The package includes `cp2015nafta`, a list containing the required model sets,
+intermediate consumption, final consumption, value added, bilateral trade and
+tariff data, deficits, and trade elasticities.
 
 ```{r}
-# Data for example
-# cp2015_nafta is the data available in the package
-data <- cp2015_nafta
-str(data)
+str(cp2015nafta)
 ```
 
-## Running the simulation
+## Welfare effects from NAFTA's tariff reductions (table 2)
 
-In section 5.1, Caliendo and Parro (2015) consider zero aggregate deficits in the baseline and counterfactual scenarios. To do this, just use the `run_cp2015()` function with the P `zero_aggregate_deficit = TRUE` to calculate the results. Use `help(run_cp2015)` to see more details about this function. 
+Caliendo and Parro (2015) impose zero aggregate deficits in the baseline and
+counterfactual scenarios. Use `zero_aggregate_deficit = TRUE` to reproduce that
+scenario.
 
 ```{r}
-# Get the results
-results <- run_cp2015(data = cp2015_nafta, zero_aggregate_deficit = TRUE)
-
+results <- run_cp2015(data = cp2015nafta, zero_aggregate_deficit = TRUE)
 str(results)
 ```
 
-## Reporting the results
-
-We have extended the welfare decomposition formula to account for the possibility of changes in iceberg trade costs (variations in technical efficiency).
-
-$$d \ln W_n = \frac{1}{I_n}\sum_{j = 1}^J\sum_{i = 1}^N \underbrace{\left(E_{ni}^j d \ln c_n^j - M_{ni}^j d \ln c_i^j \right)}_{\text{Terms of trade}} + \frac{1}{I_n} \sum_{j = 1}^J\sum_{i = 1}^N \underbrace{\tau_{ni}^ j M_{ni}^j \left(d \ln M_{ni}^j - d \ln c_i^j \right)}_{\text{Volume of trade}} - \frac{1}{I_n} \sum_{j = 1}^J\sum_{i = 1}^N \underbrace{M_{ni}^j (1 + \tau_{ni}^j) d \ln d_{ni}^j}_{\text{Technical efficiency}}$$
+The welfare decomposition includes terms of trade, volume of trade, and
+technical efficiency. The latter is zero in this tariff-only example.
 
 ```{r}
-# Welfare for NAFTA countries
 nafta <- c("Canada", "Mexico", "USA")
-results$welfare %>%
-  filter(region %in% nafta) %>%
-  mutate(region = factor(region, levels = c("Mexico", "Canada", "USA"))) %>%
-  kable(
-    format = "html",
-    digits = 2,
-    col.names = c(
-      "Country", "Terms of trade", "Volume of trade", "Technical efficiency",
-       "Total", "Real wages"
-      ),
-    caption = "Welfare effects from NAFTA’s tariff reductions"
-  ) %>%
-  kable_styling(full_width = TRUE) %>%
-  add_header_above(
-    c(" " = 1, "Welfare" = 4, " " = 1)
-  )
+welfare <- results$welfare[region %in% nafta]
+
+knitr::kable(
+  welfare,
+  digits = 2,
+  col.names = c(
+    "Country", "Terms of trade", "Volume of trade", "Technical efficiency",
+    "Total", "Real wages"
+  ),
+  caption = "Welfare effects from NAFTA's tariff reductions"
+)
 ```
 
-```{r}
-tot_bilateral <- results$tot %>%
-  filter(region %in% nafta) %>%
-  mutate(
-    partner = case_when(
-      partner %in% nafta ~ "NAFTA",
-      TRUE ~ "ROW"
-    ),
-    category = "ToT"
-  ) %>%
-  group_by(region, partner, category) %>%
-  summarise(
-    value = sum(tot),
-    .groups = "drop"
-  )
-
-vot_bilateral <- results$vot %>%
-  filter(
-    region %in% nafta
-  ) %>%
-  mutate(
-    partner = case_when(
-      partner %in% nafta ~ "NAFTA",
-      TRUE ~ "ROW"
-    ),
-    category = "VoT"
-  ) %>%
-  group_by(region, partner, category) %>%
-  summarise(
-    value = sum(vot),
-    .groups = "drop"
-  )
-
-bind_rows(tot_bilateral, vot_bilateral) %>%
-  unite(partner_cat, partner, category) %>%
-  pivot_wider(
-    names_from = "partner_cat",
-    values_from = "value"
-  ) %>%
-  mutate(region = factor(region, levels = c("Mexico", "Canada", "USA"))) %>%
-  arrange(region) %>%
-  kable(
-    format = "html",
-    digits = 2,
-    col.names = c("Country", "NAFTA", "Rest of the world", "NAFTA", "Rest of the world"),
-    caption = "Bilateral welfare effects from NAFTA’s tariff reductions"
-  ) %>%
-  kable_styling(full_width = TRUE) %>%
-  add_header_above(
-    c(" " = 1, "Terms of trade" = 2, "Volume of trade" = 2)
-  )
-```
+## Bilateral welfare effects from NAFTA's tariff reductions (table 3)
 
 ```{r}
-sectors <- c(
-  "Agriculture", "Mining", "Food", "Textile",
-  "Wood", "Paper", "Petroleum", "Chemicals", "Plastic", "Minerals",
-  "Basic metals", "Metal products", "Machinery n.e.c", "Office",
-  "Electrical", "Communication", "Medical", "Auto", "Other Transport",
-  "Other"
+tot_bilateral <- results$tot[region %in% nafta]
+tot_bilateral[, partner := fifelse(partner %in% nafta, "NAFTA", "ROW")]
+tot_bilateral <- tot_bilateral[, .(ToT = sum(tot)), by = .(region, partner)]
+
+vot_bilateral <- results$vot[region %in% nafta]
+vot_bilateral[, partner := fifelse(partner %in% nafta, "NAFTA", "ROW")]
+vot_bilateral <- vot_bilateral[, .(VoT = sum(vot)), by = .(region, partner)]
+
+bilateral <- merge(
+  tot_bilateral,
+  vot_bilateral,
+  by = c("region", "partner"),
+  all = TRUE,
+  sort = FALSE
 )
 
-tot_sector <- results$tot %>%
-  filter(region %in% nafta) %>%
-  group_by(region, sector) %>%
-  summarise(
-    tot = sum(tot),
-    .groups = "drop"
-  ) %>%
-  group_by(region) %>%
-  mutate(
-    category = "ToT",
-    value = tot / sum(tot) * 100
-  ) %>%
-  select(-tot) %>%
-  filter(sector %in% sectors)
+bilateral <- dcast(
+  bilateral,
+  region ~ partner,
+  value.var = c("ToT", "VoT")
+)
 
-
-vot_sector <- results$vot %>%
-  filter(region %in% nafta, sector %in% sectors) %>%
-  group_by(region, sector) %>%
-  summarise(
-    vot = sum(vot),
-    .groups = "drop"
-  ) %>%
-  group_by(region) %>%
-  mutate(
-    category = "VoT",
-    value = vot / sum(vot) * 100
-  ) %>%
-  select(-vot) %>%
-  filter(sector %in% sectors)
-
-bind_rows(tot_sector, vot_sector) %>%
-  unite(region_cat, region, category) %>%
-  pivot_wider(
-    names_from = "region_cat",
-    values_from = "value"
-  ) %>%
-  select(sector, contains("Mexico"), contains("Canada"), contains("USA")) %>%
-  kable(
-    format = "html",
-    digits = 2,
-    col.names = c(
-      "Sector", "Terms of trade", "Volume of trade", "Terms of trade",
-      "Volume of trade", "Terms of trade", "Volume of trade"
-    ),
-    caption = "Sectoral contribution to welfare effects from NAFTA’s tariff reductions (%)"
-  ) %>%
-  kable_styling(full_width = TRUE) %>%
-  add_header_above(
-    c(" " = 1, "Mexico" = 2, "Canada" = 2, "USA" = 2)
-  )
+knitr::kable(
+  bilateral,
+  digits = 2,
+  caption = "Bilateral welfare effects from NAFTA's tariff reductions"
+)
 ```
 
+## Sectoral contribution to welfare effects from NAFTA's tariff reductions (table 4)
 
 ```{r}
-results$trade %>%
-  filter(importer %in% nafta, exporter %in% nafta) %>%
-  group_by(importer, exporter) %>%
-  summarise(
-    trade_bln = sum(trade_bln),
-    trade_cfl = sum(trade_cfl),
-    .groups = "drop"
-  ) %>%
-  mutate(
-    change = (trade_cfl / trade_bln - 1) * 100,
-    change = ifelse(exporter == importer, NA, change)
-  ) %>%
-  select(importer, exporter, change) %>%
-  mutate(
-    importer = factor(importer, levels = c("Mexico", "Canada", "USA")),
-    exporter = factor(exporter, levels = c("Mexico", "Canada", "USA"))
-  ) %>%
-  arrange(importer, exporter) %>%
-  pivot_wider(
-    names_from = "exporter",
-    values_from = "change"
-  ) %>%
-  kable(
-    format = "html",
-    digits = 2,
-    col.names = c("Import Contry", "Mexico", "Canada", "USA"),
-    captions = "Trade effects from NAFTA’s tariff reductions"
-  ) %>%
-  kable_styling(full_width = TRUE)
+tot_sector <- results$tot[region %in% nafta]
+tot_sector <- tot_sector[, .(ToT = sum(tot)), by = .(region, sector)]
+tot_sector[, ToT := 100 * ToT / sum(ToT), by = region]
+
+vot_sector <- results$vot[region %in% nafta]
+vot_sector <- vot_sector[, .(VoT = sum(vot)), by = .(region, sector)]
+vot_sector[, VoT := 100 * VoT / sum(VoT), by = region]
+
+sectoral <- merge(
+  tot_sector,
+  vot_sector,
+  by = c("region", "sector"),
+  all = TRUE,
+  sort = FALSE
+)
+
+sectoral <- dcast(
+  sectoral,
+  sector ~ region,
+  value.var = c("ToT", "VoT")
+)
+
+setcolorder(
+  sectoral,
+  c(
+    "sector",
+    "ToT_Mexico", "VoT_Mexico",
+    "ToT_Canada", "VoT_Canada",
+    "ToT_USA", "VoT_USA"
+  )
+)
+
+knitr::kable(
+  sectoral,
+  digits = 2,
+  col.names = c(
+    "Sector",
+    "Mexico: Terms of trade", "Mexico: Volume of trade",
+    "Canada: Terms of trade", "Canada: Volume of trade",
+    "United States: Terms of trade", "United States: Volume of trade"
+  ),
+  caption = "Sectoral contribution to welfare effects from NAFTA's tariff reductions"
+)
 ```
 
+## Trade effects from NAFTA's tariff reductions (table 5)
+
 ```{r}
-results$trade %>%
-  filter(exporter %in% nafta, exporter != importer) %>%
-  group_by(exporter, sector) %>%
-  summarise(
-    trade_bln = sum(trade_bln),
-    trade_cfl = sum(trade_cfl),
-    .groups = "drop"
-  ) %>%
-  group_by(exporter) %>%
-  mutate(
-    share_bln = trade_bln / sum(trade_bln) * 100,
-    share_cfl = trade_cfl / sum(trade_cfl) * 100
-  ) %>%
-  select(exporter, sector, contains("share")) %>%
-  pivot_longer(
-    cols = c("share_bln", "share_cfl"),
-    names_to = "category",
-    values_to = "value"
-  ) %>%
-  unite(exporter_cat, exporter, category) %>%
-  pivot_wider(
-    names_from = "exporter_cat",
-    values_from = "value"
-  ) %>%
-  select(sector, contains("Mexico"), contains("Canada"), contains("USA")) %>%
-  filter(sector %in% sectors) %>% 
-  kable(
-    format = "html",
-    digits = 2,
-    col.names = c("Sector", "Before", "After", "Before", "After", "Before", "After"),
-    caption = "Export shares by sector before and after NAFTA’s tariff reductions (%)"
-  ) %>%
-  kable_styling(full_width = TRUE) %>%
-  add_header_above(
-    c(" " = 1, "Mexico" = 2, "Canada" = 2, "USA" = 2)
-  )
+trade <- results$trade
+trade <- trade[importer %in% nafta & exporter %in% nafta]
+trade <- trade[, .(trade_bln = sum(trade_bln), trade_cfl = sum(trade_cfl)),
+  by = .(importer, exporter)
+]
+trade[, change := (trade_cfl / trade_bln - 1) * 100]
+trade[exporter == importer, change := NA_real_]
+
+knitr::kable(
+  trade[, .(importer, exporter, change)],
+  digits = 2,
+  caption = "Trade effects from NAFTA's tariff reductions"
+)
 ```

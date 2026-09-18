@@ -1,18 +1,18 @@
 #' Run a simulation using the Caliendo and Parro (2015) quantitative trade model
-#'  
-#' @description 
-#' 
-#'  
+#'
+#' @description
+#'
+#'
 #' Caliendo and Parro (2015) develop a Ricardian quantitative trade model that
 #' considers multiple countries and multiple sectors. The model allows interactions
-#' across sectors based on Input-Output linkages. 
-#' 
+#' across sectors based on Input-Output linkages.
+#'
 #' The model is originally used to study the trade and welfare effects of NAFTA
 #' given the observed tariff changes. However, from data provided by the user, this model
 #' can be used for simulations to assess the effects of different trade
-#' policies (changes in tariffs and/or iceberg trade costs).   
-#' 
-#' @param data a List with the model data. Run \code{help(cp2015_nafta)} to see
+#' policies (changes in tariffs and/or iceberg trade costs).
+#'
+#' @param data a List with the model data. Run \code{help(cp2015nafta)} to see
 #' the required data.
 #' @param zero_aggregate_deficit a boolean indicating whether the simulation
 #' should impose zero aggregate deficits.
@@ -24,41 +24,41 @@
 #' @param triter an integer indicating that information should be printed for each
 #' multiple of that number.
 #' @param nthreads an integer indicating the number of threads to use.
-#' 
-#' @return 
-#' 
+#'
+#' @return
+#'
 #' A list with 13 elements:
-#' 
-#'  * c_nj_hat (changes in cost an input bundle) - a data.frame with 3 columns:
+#'
+#'  * c_nj_hat (changes in cost an input bundle) - a data.table with 3 columns:
 #'    * region
 #'    * sector
 #'    * c_nj_hat (relative change)
-#'  * P_nj_hat (changes in the region-sector price index) - a data.frame with 3 columns:
+#'  * P_nj_hat (changes in the region-sector price index) - a data.table with 3 columns:
 #'    * region
 #'    * sector
 #'    * P_nj_hat (relative change)
-#'  * pi_nij (bilateral trade share) - a data.frame with 5 columns:
+#'  * pi_nij (bilateral trade share) - a data.table with 5 columns:
 #'    * importer
 #'    * exporter
 #'    * sector
 #'    * pi_bln (trade share in the baseline scenario)
 #'    * pi_cfl (trade share in the counterfactual scenario)
-#'  * X_nj (total expenditure) - a data.frame with 4 columns:
+#'  * X_nj (total expenditure) - a data.table with 4 columns:
 #'    * region
 #'    * sector
 #'    * X_bln (expenditure in the baseline scenario)
 #'    * X_cfl (expenditure in the counterfactual scenario)
-#'  * I_n (regional income) - a data.frame with 3 columns:
+#'  * I_n (regional income) - a data.table with 3 columns:
 #'    * region
 #'    * I_bln (regional income in the baseline scenario)
 #'    * I_cfl (regional income in the counterfactual scenario)
-#'  * P_n_hat (consumer price index) - a data.frame with 2 columns:
+#'  * P_n_hat (consumer price index) - a data.table with 2 columns:
 #'    * region
 #'    * P_n_hat (relative change)
-#'  * w_n_hat ("wages") - a data.frame with 2 columns:
+#'  * w_n_hat ("wages") - a data.table with 2 columns:
 #'    * region
 #'    * w_hat (relative change)
-#'  * trade (trade data) - a data.frame with 9 columns:
+#'  * trade (trade data) - a data.table with 9 columns:
 #'    * importer
 #'    * exporter
 #'    * sector
@@ -68,53 +68,52 @@
 #'    * d_cfl (relative changes of the iceberg trade costs in the counterfactual scenario)
 #'    * trade_bln (trade value, net of tariffs, in the baseline scenario)
 #'    * trade_cfl (trade value, net of tariffs, in the counterfactual scenario)
-#'  * tot (terms of trade) - a data.frame with 4 columns:
+#'  * tot (terms of trade) - a data.table with 4 columns:
 #'    * partner
 #'    * region
 #'    * sector
 #'    * tot (contribution of terms of trade to welfare in %)
-#'  * vot (volume of trade) - a data.frame with 4 columns:
+#'  * vot (volume of trade) - a data.table with 4 columns:
 #'    * region
 #'    * partner
 #'    * sector
 #'    * vot (contribution of volume of trade to welfare in %)
-#'  * tech (technical efficiency) - a data.frame with 4 columns:
+#'  * tech (technical efficiency) - a data.table with 4 columns:
 #'    * region
 #'    * partner
 #'    * sector
 #'    * tech (contribution of technical efficiency to welfare in %)
-#'  * welfare (total welfare by region) - a data.frame with 6 columns:
+#'  * welfare (total welfare by region) - a data.table with 6 columns:
 #'    * region
 #'    * tot (contribution of terms of trade to welfare in %)
 #'    * vot (contribution of volume of trade to welfare in %)
 #'    * tech (contribution of technical efficiency to welfare in %)
 #'    * welfare (total welfare in %)
 #'    * realwage (relative change in the real wage).
-#'  * convergence_info (info about the solution) - a data.frame with 3 variables:
+#'  * convergence_info (info about the solution) - a data.table with 3 variables:
 #'    * scenario
 #'    * criteria_value
 #'    * message
-#' 
-#' @references 
+#'
+#' @references
 #' Lorenzo Caliendo, Fernando Parro, Estimates of the Trade and Welfare Effects of NAFTA,
 #' \emph{The Review of Economic Studies}, Volume 82, Issue 1, January 2015, Pages 1–44, https://doi.org/10.1093/restud/rdu035
 #'
-#' @examples 
-#' 
+#' @examples
 #' \dontrun{
-#'   data("cp2015_nafta")
-#'   
-#'   results_without_deficits <- run_cp2015(
-#'     data = cp2015_nafta,
-#'     zero_aggregate_deficit = TRUE,
-#'     verbose = TRUE
-#'   )
-#'   
-#'   results_with_deficits <- run_cp2015(
-#'     data = cp2015_nafta,
-#'     zero_aggregate_deficit = FALSE,
-#'     verbose = TRUE
-#'   )
+#' data("cp2015nafta")
+#'
+#' results_without_deficits <- run_cp2015(
+#'   data = cp2015nafta,
+#'   zero_aggregate_deficit = TRUE,
+#'   verbose = TRUE
+#' )
+#'
+#' results_with_deficits <- run_cp2015(
+#'   data = cp2015nafta,
+#'   zero_aggregate_deficit = FALSE,
+#'   verbose = TRUE
+#' )
 #' }
 #'
 #' @export
@@ -125,26 +124,14 @@ run_cp2015 <- function(data,
                        maxiter = 10000,
                        verbose = TRUE,
                        triter = 100,
-                       nthreads = 1) { 
-
-  if (zero_aggregate_deficit) {
-    data$deficit <- data$deficit %>%
-      dplyr::mutate(
-        D_bln = 0,
-        D_cfl = 0
-      )
-  } else {
-    data$deficit <- data$deficit %>%
-      dplyr::mutate(
-        D_bln = D,
-        D_cfl = D
-      )
-  }
-
-  data <- prepare_cp2015(data)
+                       nthreads = 1) {
+  data <- prepare_cp2015(
+    data,
+    zero_aggregate_deficit = zero_aggregate_deficit
+  )
 
   if (verbose) {
-    cat(crayon::green("Solving the baseline.\n"))
+    cat("Solving the baseline.\n")
   }
 
   sol_bln <- solve_model(
@@ -162,7 +149,7 @@ run_cp2015 <- function(data,
   data$variables$D_n <- data$variables$D_n_cfl
 
   if (verbose) {
-    cat(crayon::green("Solving the counterfactual.\n"))
+    cat("Solving the counterfactual.\n")
   }
 
   sol_cfl <- solve_model(

@@ -1,15 +1,15 @@
 #' Data for NAFTA's tariff reductions simulation in Caliendo and Parro (2015)
-#' 
-#' @description 
-#' This data is used to replicate the results of Caliendo and Parro (2015) for 
+#'
+#' @description
+#' This data is used to replicate the results of Caliendo and Parro (2015) for
 #' (only) NAFTA's tariff reductions. In addition, it shows the data structure
 #' needed to use this package.
-#' 
+#'
 #' The data structure has been modified for compatibility with the package.
 #' Therefore, the data are not in the original format provided by Caliendo and Parro (2015).
 #' The original data is available at: \url{https://academic.oup.com/restud/article/82/1/1/1547758#supplementary-data}.
-#' 
-#' @format A named list of 7 elements: sets, intermediate_consumption, final_consumption, 
+#'
+#' @format A named list of 7 elements: sets, intermediate_consumption, final_consumption,
 #' trade, deficit, and theta.
 #' \itemize{
 #'   \item sets. A named list of vectors containing all regions and all sectors in data.
@@ -45,7 +45,7 @@
 #'       \item d_bln. The relative change in iceberg trade costs in the baseline scenario (1 = no change).
 #'       \item d_cfl. The relative change in iceberg trade costs in the counterfactual scenario (1 = no change).
 #'        As the model solution is in exact changes, the initial value can be set
-#'        to 1 and changes can be set proportionally. 
+#'        to 1 and changes can be set proportionally.
 #'     }
 #'   \item deficit. A data.frame with 4 columns containing the deficit data?
 #'     \itemize{
@@ -58,8 +58,8 @@
 #'        \item value. The theta (trade elasticity) parameter value.
 #'     }
 #' }
-#' 
-#' @references 
+#'
+#' @references
 #' Lorenzo Caliendo, Fernando Parro, Estimates of the Trade and Welfare Effects of NAFTA,
 #' \emph{The Review of Economic Studies}, Volume 82, Issue 1, January 2015, Pages 1–44, https://doi.org/10.1093/restud/rdu035
-"cp2015_nafta"
+"cp2015nafta"
