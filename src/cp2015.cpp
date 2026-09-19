@@ -1,9 +1,4 @@
 // clang-format off
-#include <algorithm>
-#include <cmath>
-#include <stdexcept>
-#include <string>
-
 #include <cpp4r.hpp>
 #include <armadillo4r.hpp>
 
@@ -105,6 +100,8 @@ SEXP append_or_replace_named(SEXP x, const char* name, SEXP value) {
   return out;
 }
 
+// Zero-copy Col<double>/Mat<double> wrapping, delegated to armadillo4r's
+// as_Col()/as_Mat(); only the argument validation stays custom here.
 arma::Col<double> as_arma_col(SEXP x, const char* name) {
   if (TYPEOF(x) != REALSXP) {
     cpp4r::stop("'%s' must be a numeric array", name);
@@ -112,6 +109,7 @@ arma::Col<double> as_arma_col(SEXP x, const char* name) {
   return arma::Col<double>(REAL(x), static_cast<arma::uword>(Rf_xlength(x)), false, false);
 }
 
+// Same for matrices
 arma::Mat<double> as_arma_mat(SEXP x, const char* name, int nrow, int ncol) {
   if (TYPEOF(x) != REALSXP) {
     cpp4r::stop("'%s' must be a numeric matrix/array", name);
@@ -122,6 +120,9 @@ arma::Mat<double> as_arma_mat(SEXP x, const char* name, int nrow, int ncol) {
   return arma::Mat<double>(REAL(x), nrow, ncol, false, false);
 }
 
+// armadillo4r's as_Cube() only accepts a cpp4r list<doubles_matrix<>>, but our
+// 3D data arrives as a single flat REALSXP array, so a custom zero-copy
+// wrapper is still needed here.
 arma::Cube<double> as_arma_cube(SEXP x, const char* name, int nrow, int ncol, int nslice) {
   if (TYPEOF(x) != REALSXP) {
     cpp4r::stop("'%s' must be a numeric array", name);
