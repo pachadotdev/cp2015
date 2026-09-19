@@ -22,7 +22,7 @@ compute_results <- function(sol_bln, sol_cfl) {
     suffix = c("_bln", "_cfl")
   )
   c_hat[, c_hat := value_cfl / value_bln]
-  c_hat <- c_hat[, .(region, sector, c_hat)]
+  c_hat <- c_hat[, list(region, sector, c_hat)]
 
   P_hat <- left_join_dt(
     x = array_to_df(sol_bln$variables$P_nj_hat),
@@ -31,7 +31,7 @@ compute_results <- function(sol_bln, sol_cfl) {
     suffix = c("_bln", "_cfl")
   )
   P_hat[, P_hat := value_cfl / value_bln]
-  P_hat <- P_hat[, .(region, sector, P_hat)]
+  P_hat <- P_hat[, list(region, sector, P_hat)]
 
   pi_ <- left_join_dt(
     x = array_to_df(sol_bln$variables$pi_nij1),
@@ -80,7 +80,7 @@ compute_results <- function(sol_bln, sol_cfl) {
   )]
   trade <- left_join_dt(trade, d, by = c("importer", "exporter", "sector"))
   trade <- trade[
-    , .(importer, exporter, sector, tau_bln, tau_cfl, d_bln, d_cfl, trade_bln, trade_cfl)
+    , list(importer, exporter, sector, tau_bln, tau_cfl, d_bln, d_cfl, trade_bln, trade_cfl)
   ]
 
   I_n <- left_join_dt(
@@ -98,7 +98,7 @@ compute_results <- function(sol_bln, sol_cfl) {
     suffix = c("_bln", "_cfl")
   )
   P_n_hat[, P_n_hat := value_cfl / value_bln]
-  P_n_hat <- P_n_hat[, .(region, P_n_hat)]
+  P_n_hat <- P_n_hat[, list(region, P_n_hat)]
 
   w_hat <- left_join_dt(
     x = array_to_df(sol_bln$variables$w_n_hat),
@@ -107,10 +107,10 @@ compute_results <- function(sol_bln, sol_cfl) {
     suffix = c("_bln", "_cfl")
   )
   w_hat[, w_hat := value_cfl / value_bln]
-  w_hat <- w_hat[, .(region, w_hat)]
+  w_hat <- w_hat[, list(region, w_hat)]
 
-  tot <- trade[, .(importer, exporter, sector, exp_bln = trade_bln)]
-  imp <- trade[, .(importer, exporter, sector, imp_bln = trade_bln)]
+  tot <- trade[, list(importer, exporter, sector, exp_bln = trade_bln)]
+  imp <- trade[, list(importer, exporter, sector, imp_bln = trade_bln)]
   tot <- merge(
     tot,
     imp,
@@ -146,7 +146,7 @@ compute_results <- function(sol_bln, sol_cfl) {
     sort = FALSE
   )
   tot[, tot := tot / I_bln * 100]
-  tot <- tot[, .(partner = importer, region = exporter, sector, tot)]
+  tot <- tot[, list(partner = importer, region = exporter, sector, tot)]
 
   vot <- merge(
     trade,
@@ -166,7 +166,7 @@ compute_results <- function(sol_bln, sol_cfl) {
     sort = FALSE
   )
   vot[, vot := vot / I_bln * 100]
-  vot <- vot[, .(region = importer, partner = exporter, sector, vot)]
+  vot <- vot[, list(region = importer, partner = exporter, sector, vot)]
 
   tech <- copy(trade)
   tech[, tech := -trade_bln * (1 + tau_bln) * (d_cfl / d_bln - 1)]
@@ -179,15 +179,15 @@ compute_results <- function(sol_bln, sol_cfl) {
     sort = FALSE
   )
   tech[, tech := tech / I_bln * 100]
-  tech <- tech[, .(region = importer, partner = exporter, sector, tech)]
+  tech <- tech[, list(region = importer, partner = exporter, sector, tech)]
 
-  tot_total <- tot[, .(tot = sum(tot)), by = region]
-  vot_total <- vot[, .(vot = sum(vot)), by = region]
-  tech_total <- tech[, .(tech = sum(tech)), by = region]
+  tot_total <- tot[, list(tot = sum(tot)), by = region]
+  vot_total <- vot[, list(vot = sum(vot)), by = region]
+  tech_total <- tech[, list(tech = sum(tech)), by = region]
 
   real_wage <- merge(w_hat, P_n_hat, by = "region", all.x = TRUE, sort = FALSE)
   real_wage[, realwage := (w_hat / P_n_hat - 1) * 100]
-  real_wage <- real_wage[, .(region, realwage)]
+  real_wage <- real_wage[, list(region, realwage)]
 
   welfare <- merge(tot_total, vot_total, by = "region", all.x = TRUE, sort = FALSE)
   welfare <- merge(welfare, tech_total, by = "region", all.x = TRUE, sort = FALSE)

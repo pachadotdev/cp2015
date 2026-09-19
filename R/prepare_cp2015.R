@@ -44,10 +44,10 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
 
   pi_dt <- copy(trade)
   pi_dt[, value := value * (1 + tariff) / sum(value * (1 + tariff)),
-    by = .(sector, importer)
+    by = list(sector, importer)
   ]
   pi_nij0 <- df_to_array(
-    pi_dt[, .(importer, exporter, sector, value)],
+    pi_dt[, list(importer, exporter, sector, value)],
     indexes = list(
       importer = sets$regions,
       exporter = sets$regions,
@@ -56,7 +56,7 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   )
 
   tau_nij0 <- df_to_array(
-    trade[, .(importer, exporter, sector, tariff)],
+    trade[, list(importer, exporter, sector, tariff)],
     indexes = list(
       importer = sets$regions,
       exporter = sets$regions,
@@ -68,12 +68,12 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   value_added <- data$value_added
 
   total_intermediate_consumption <- intermediate_consumption[
-    , .(value_ic = sum(value)),
-    by = .(region, sector)
+    , list(value_ic = sum(value)),
+    by = list(region, sector)
   ]
   total_value_added <- value_added[
-    , .(value_va = sum(value)),
-    by = .(region, sector)
+    , list(value_va = sum(value)),
+    by = list(region, sector)
   ]
   output <- merge(
     total_intermediate_consumption,
@@ -85,7 +85,7 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   output[is.na(value_ic), value_ic := 0]
   output[is.na(value_va), value_va := 0]
   output[, value_output := value_ic + value_va]
-  output <- output[, .(region, sector, value_output)]
+  output <- output[, list(region, sector, value_output)]
 
   gamma_nkj_dt <- merge(
     intermediate_consumption,
@@ -96,7 +96,7 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   )
   gamma_nkj_dt[, value := value / value_output]
   gamma_nkj <- df_to_array(
-    gamma_nkj_dt[, .(region, input, sector, value)],
+    gamma_nkj_dt[, list(region, input, sector, value)],
     indexes = list(
       region = sets$regions,
       input = sets$sectors,
@@ -113,7 +113,7 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   )
   gamma_nj_dt[, value := value / value_output]
   gamma_nj <- df_to_array(
-    gamma_nj_dt[, .(region, sector, value)],
+    gamma_nj_dt[, list(region, sector, value)],
     indexes = list(
       region = sets$regions,
       sector = sets$sectors
@@ -124,7 +124,7 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   alpha_dt <- copy(final_consumption)
   alpha_dt[, value := value / sum(value), by = region]
   alpha_nj <- df_to_array(
-    alpha_dt[, .(region, sector, value)],
+    alpha_dt[, list(region, sector, value)],
     indexes = list(
       region = sets$regions,
       sector = sets$sectors
@@ -148,7 +148,7 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   )
 
   d_nij_hat <- df_to_array(
-    trade[, .(importer, exporter, sector, d_bln)],
+    trade[, list(importer, exporter, sector, d_bln)],
     indexes = list(
       importer = sets$regions,
       exporter = sets$regions,
@@ -157,7 +157,7 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   )
 
   d_nij_hat_cfl <- df_to_array(
-    trade[, .(importer, exporter, sector, d_cfl)],
+    trade[, list(importer, exporter, sector, d_cfl)],
     indexes = list(
       importer = sets$regions,
       exporter = sets$regions,
@@ -166,7 +166,7 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   )
 
   tau_nij1 <- df_to_array(
-    trade[, .(importer, exporter, sector, tariff_bln)],
+    trade[, list(importer, exporter, sector, tariff_bln)],
     indexes = list(
       importer = sets$regions,
       exporter = sets$regions,
@@ -175,7 +175,7 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   )
 
   tau_nij1_cfl <- df_to_array(
-    trade[, .(importer, exporter, sector, tariff_cfl)],
+    trade[, list(importer, exporter, sector, tariff_cfl)],
     indexes = list(
       importer = sets$regions,
       exporter = sets$regions,
@@ -191,12 +191,12 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   )
 
   wL_n <- df_to_array(
-    value_added[, .(value = sum(value)), by = region],
+    value_added[, list(value = sum(value)), by = region],
     indexes = list(region = sets$regions)
   )
 
   X_nj1 <- df_to_array(
-    trade[, .(value = sum(value * (1 + tariff))), by = .(region = importer, sector)],
+    trade[, list(value = sum(value * (1 + tariff))), by = list(region = importer, sector)],
     indexes = list(
       region = sets$regions,
       sector = sets$sectors
@@ -211,22 +211,22 @@ prepare_cp2015 <- function(data, zero_aggregate_deficit = FALSE) {
   }
 
   D_n <- df_to_array(
-    deficit[, .(region, D)],
+    deficit[, list(region, D)],
     indexes = list(region = sets$regions)
   )
 
   D_n_bln <- df_to_array(
-    deficit[, .(region, D_bln)],
+    deficit[, list(region, D_bln)],
     indexes = list(region = sets$regions)
   )
 
   D_n_cfl <- df_to_array(
-    deficit[, .(region, D_cfl)],
+    deficit[, list(region, D_cfl)],
     indexes = list(region = sets$regions)
   )
 
   tariff_revenue <- df_to_array(
-    trade[, .(value = sum(value * tariff)), by = .(region = importer)],
+    trade[, list(value = sum(value * tariff)), by = list(region = importer)],
     indexes = list(region = sets$regions)
   )
 

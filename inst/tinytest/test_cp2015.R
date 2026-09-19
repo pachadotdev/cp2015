@@ -2,11 +2,11 @@
 local({
   expected_results <- data.table::data.table(
         region = c("Canada", "Mexico", "USA"),
+        total = c(-0.06, 1.31, 0.08),
         tot = c(-0.11, -0.41, 0.04),
         vot = c(0.04, 1.72, 0.04),
-        tech = c(0, 0, 0),
-        welfare = c(-0.06, 1.31, 0.08),
-        realwage = c(0.32, 1.72, 0.11)
+        realwage = c(0.32, 1.72, 0.11),
+        tech = c(0, 0, 0)
     )
 
     results <- run_cp2015(
@@ -32,11 +32,11 @@ local({
 local({
   expected_results <- data.table::data.table(
         region = c("Canada", "Mexico", "USA"),
+        total = c(-0.04, 1.17, 0.08),
         tot = c(-0.08, -0.41, 0.05),
         vot = c(0.04, 1.59, 0.04),
-        tech = c(0, 0, 0),
-        welfare = c(-0.04, 1.17, 0.08),
-        realwage = c(0.33, 1.64, 0.12)
+        realwage = c(0.33, 1.64, 0.12),
+        tech = c(0, 0, 0)
         )
     
     results <- run_cp2015(
