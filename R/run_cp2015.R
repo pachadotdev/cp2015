@@ -23,7 +23,6 @@
 #' @param verbose a boolean indicating whether convergence information should be printed.
 #' @param triter an integer indicating that information should be printed for each
 #' multiple of that number.
-#' @param nthreads an integer indicating the number of threads to use.
 #'
 #' @return
 #'
@@ -123,8 +122,7 @@ run_cp2015 <- function(data,
                        tol = 1e-7,
                        maxiter = 10000,
                        verbose = TRUE,
-                       triter = 100,
-                       nthreads = 1) {
+                       triter = 100) {
   data <- prepare_cp2015(
     data,
     zero_aggregate_deficit = zero_aggregate_deficit
@@ -140,8 +138,7 @@ run_cp2015 <- function(data,
     maxiter = maxiter,
     tol = tol,
     triter = triter,
-    trace = verbose,
-    nthreads = nthreads
+    trace = verbose
   )
 
   data$variables$tau_nij1 <- data$variables$tau_nij1_cfl
@@ -158,8 +155,7 @@ run_cp2015 <- function(data,
     maxiter = maxiter,
     tol = tol,
     triter = triter,
-    trace = verbose,
-    nthreads = nthreads
+    trace = verbose
   )
 
   results <- compute_results(sol_bln, sol_cfl)

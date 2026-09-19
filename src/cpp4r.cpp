@@ -5,17 +5,17 @@
 #include "cpp4r/declarations.hpp"
 #include <R_ext/Visibility.h>
 
-// solve_model.h
-cpp4r::sexp solve_model(cpp4r::sexp data, double ufactor, double tol, int maxiter, int triter, bool trace, int nthreads);
-extern "C" SEXP _cp2015_solve_model(SEXP data, SEXP ufactor, SEXP tol, SEXP maxiter, SEXP triter, SEXP trace, SEXP nthreads) {
+// cp2015.cpp
+cpp4r::sexp solve_model(cpp4r::sexp data, double ufactor, double tol, int maxiter, int triter, bool trace);
+extern "C" SEXP _cp2015_solve_model(SEXP data, SEXP ufactor, SEXP tol, SEXP maxiter, SEXP triter, SEXP trace) {
   BEGIN_CPP4R
-    return cpp4r::as_sexp(solve_model(cpp4r::as_cpp<cpp4r::decay_t<cpp4r::sexp>>(data), cpp4r::as_cpp<cpp4r::decay_t<double>>(ufactor), cpp4r::as_cpp<cpp4r::decay_t<double>>(tol), cpp4r::as_cpp<cpp4r::decay_t<int>>(maxiter), cpp4r::as_cpp<cpp4r::decay_t<int>>(triter), cpp4r::as_cpp<cpp4r::decay_t<bool>>(trace), cpp4r::as_cpp<cpp4r::decay_t<int>>(nthreads)));
+    return cpp4r::as_sexp(solve_model(cpp4r::as_cpp<cpp4r::decay_t<cpp4r::sexp>>(data), cpp4r::as_cpp<cpp4r::decay_t<double>>(ufactor), cpp4r::as_cpp<cpp4r::decay_t<double>>(tol), cpp4r::as_cpp<cpp4r::decay_t<int>>(maxiter), cpp4r::as_cpp<cpp4r::decay_t<int>>(triter), cpp4r::as_cpp<cpp4r::decay_t<bool>>(trace)));
   END_CPP4R
 }
 
 extern "C" {
 static const R_CallMethodDef CallEntries[] = {
-    {"_cp2015_solve_model", (DL_FUNC) &_cp2015_solve_model, 7},
+    {"_cp2015_solve_model", (DL_FUNC) &_cp2015_solve_model, 6},
     {NULL, NULL, 0}
 };
 }

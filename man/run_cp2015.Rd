@@ -11,8 +11,7 @@ run_cp2015(
   tol = 1e-07,
   maxiter = 10000,
   verbose = TRUE,
-  triter = 100,
-  nthreads = 1
+  triter = 100
 )
 }
 
@@ -34,8 +33,6 @@ to update the value of variables at each iteration.}
 
 \item{triter}{an integer indicating that information should be printed for each
 multiple of that number.}
-
-\item{nthreads}{an integer indicating the number of threads to use.}
 }
 
 \value{

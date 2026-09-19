@@ -10,8 +10,7 @@
 #'   multiple of that number.
 #' @param trace a boolean indicating whether convergence information should be
 #'   printed.
-#' @param nthreads an integer indicating the number of threads to use.
 #' @export
-solve_model <- function(data, ufactor, tol, maxiter, triter, trace, nthreads) {
-	.Call(`_cp2015_solve_model`, data, ufactor, tol, maxiter, triter, trace, nthreads)
+solve_model <- function(data, ufactor, tol, maxiter, triter, trace) {
+	.Call(`_cp2015_solve_model`, data, ufactor, tol, maxiter, triter, trace)
 }

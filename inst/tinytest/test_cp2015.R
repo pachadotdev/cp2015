@@ -13,7 +13,6 @@ local({
         data = cp2015nafta,
         zero_aggregate_deficit = TRUE,
         tol = 1e-7,
-        nthreads = 1,
         verbose = TRUE
     )
 
@@ -44,7 +43,6 @@ local({
         data = cp2015nafta,
         zero_aggregate_deficit = FALSE,
         tol = 1e-7,
-        nthreads = 1,
         verbose = TRUE
     )
 

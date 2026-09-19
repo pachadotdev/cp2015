@@ -1,15 +1,35 @@
-#pragma once
-
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
+// clang-format off
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <string>
 
+#include <cpp4r.hpp>
+#include <armadillo4r.hpp>
+
+using namespace cpp4r;
+using namespace arma;
+
 namespace {
+// Configure OpenMP threads from configure-time macro
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+#ifdef _OPENMP
+#ifndef CP2015_DEFAULT_OMP_THREADS
+#define CP2015_DEFAULT_OMP_THREADS -1
+#endif
+inline void set_omp_threads_from_config() {
+  static bool done = false;
+  if (!done) {
+#if defined(_OPENMP) && (CP2015_DEFAULT_OMP_THREADS > 0)
+    omp_set_num_threads(CP2015_DEFAULT_OMP_THREADS);
+#endif
+    done = true;
+  }
+}
+#endif
 
 SEXP get_named(SEXP x, const char* name) {
   if (TYPEOF(x) != VECSXP) {
@@ -129,7 +149,6 @@ SEXP duplicate_array(SEXP x) {
   multiple of that number.
 @param trace a boolean indicating whether convergence information should be
   printed.
-@param nthreads an integer indicating the number of threads to use.
 @export
 */
 [[cpp4r::register]] cpp4r::sexp solve_model(cpp4r::sexp data,
@@ -137,8 +156,7 @@ SEXP duplicate_array(SEXP x) {
                                             double tol = 1e-7,
                                             int maxiter = 10000,
                                             int triter = 100,
-                                            bool trace = true,
-                                            int nthreads = 1) {
+                                            bool trace = true) {
   SEXP data_ = PROTECT(Rf_duplicate(data.data()));
 
   SEXP sets = get_named(data_, "sets");
@@ -189,12 +207,6 @@ SEXP duplicate_array(SEXP x) {
 
   double norm = NA_REAL;
   const char* message = "Unsuccessful convergence";
-
-#ifdef _OPENMP
-  if (nthreads > 0) {
-    omp_set_num_threads(nthreads);
-  }
-#endif
 
   for (int iter = 1; iter <= maxiter; iter++) {
     cpp4r::check_user_interrupt();

@@ -248,7 +248,6 @@ bilateral <- dcast(
 
 bilateral <- bilateral[match(nafta, region), ]
 
-
 knitr::kable(
   bilateral,
   digits = 2,

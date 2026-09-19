@@ -4,7 +4,7 @@
 \alias{solve_model}
 \title{Solve model}
 \usage{
-solve_model(data, ufactor, tol, maxiter, triter, trace, nthreads)
+solve_model(data, ufactor, tol, maxiter, triter, trace)
 }
 
 \arguments{
@@ -22,8 +22,6 @@ solve_model(data, ufactor, tol, maxiter, triter, trace, nthreads)
 
 \item{trace}{a boolean indicating whether convergence information should be
   printed.}
-
-\item{nthreads}{an integer indicating the number of threads to use.}
 }
 
 \description{
