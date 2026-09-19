@@ -25,6 +25,5 @@ Depends: R (>= 4.0.0)
 Imports: data.table
 LazyData: true
 LinkingTo: armadillo4r, cpp4r, Matrix
-Suggests: knitr, litedown, tinytest
+Suggests: tinytest
 NeedsCompilation: yes
-VignetteBuilder: litedown

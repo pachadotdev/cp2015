@@ -191,8 +191,9 @@ compute_results <- function(sol_bln, sol_cfl) {
 
   welfare <- merge(tot_total, vot_total, by = "region", all.x = TRUE, sort = FALSE)
   welfare <- merge(welfare, tech_total, by = "region", all.x = TRUE, sort = FALSE)
-  welfare[, welfare := tot + vot + tech]
+  welfare[, total := tot + vot + tech]
   welfare <- merge(welfare, real_wage, by = "region", all.x = TRUE, sort = FALSE)
+  setcolorder(welfare, c("region", "total", "tot", "vot", "realwage", "tech"))
 
   convergence_info <- data.table(
     scenario = c("Baseline", "Counterfactual"),

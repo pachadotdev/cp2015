@@ -97,11 +97,11 @@ A list with 13 elements:
    * tech (contribution of technical efficiency to welfare in \%)
  * welfare (total welfare by region) - a data.table with 6 columns:
    * region
+   * total (total welfare in \%)
    * tot (contribution of terms of trade to welfare in \%)
    * vot (contribution of volume of trade to welfare in \%)
-   * tech (contribution of technical efficiency to welfare in \%)
-   * welfare (total welfare in \%)
    * realwage (relative change in the real wage).
+   * tech (contribution of technical efficiency to welfare in \%)
  * convergence_info (info about the solution) - a data.table with 3 variables:
    * scenario
    * criteria_value

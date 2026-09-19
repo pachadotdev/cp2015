@@ -1,6 +1,6 @@
 #' @title Caliendo and Parro (2015) Quantitative Trade Model
 #' @useDynLib cp2015, .registration = TRUE
-#' @importFrom data.table ':=' as.data.table copy data.table set setnames setorderv setDT
+#' @importFrom data.table `:=` as.data.table copy data.table set setnames setorderv setDT
 #' @keywords internal
 "_PACKAGE"
 
