@@ -1,0 +1,179 @@
+---
+title: "Replicating 'Estimates of the Trade and Welfare Effects of NAFTA Get access Arrow' by Caliendo and Parro (2015)"
+author: "Mauricio 'Pacha' Vargas Sepulveda"
+date: "2026-09-22"
+format:
+  pdf:
+    toc: true
+    number-sections: true
+    colorlinks: true
+bibliography: bibliography.bib
+---
+
+# Introduction
+
+@caliendo2015estimates evaluate the economic impacts of the North American Free Trade Agreement using a multi-sector
+Ricardian trade model incorporating intermediate goods and input-output linkages. Their findings show that Mexico's
+welfare increases by 1.31%, USA's welfare increases by 0.08%, and Canada's welfare declines by 0.06% while at the same
+time intra-bloc trade increases by 118% for Mexico, 41% for the USA and 11% for Canada.
+
+This replication effort uses @vargas2025armadillo4r to leverage Armadillo's cube class (quasi third-order tensor, or
+3D-matrix), which simplifies solving non-linear systems as the ones required for the Ricardian model with trade sectors.
+
+The tables below correspond to an independent simulation of the results from section 5.1. in @caliendo2015estimates.
+
+```{r}
+#| warning: false
+#| message: false
+library(cp2015)
+library(data.table)
+options(knitr.kable.NA = "")
+```
+
+The `cp2015` package (\url{https://github.com/pachadotdev/cp2015/blob/main/README.md}) includes `cp2015nafta`, a list
+containing the required model sets, intermediate consumption, final consumption, value added, bilateral trade and
+tariff data, deficits, and trade elasticities.
+
+For different datasets, such as those with trade figures from the OECD, it is required to reshape the dataset before
+passing it to the package functions as in the structure below:
+
+```{r}
+str(cp2015nafta)
+```
+
+@caliendo2015estimates impose zero aggregate deficits in the baseline and counterfactual scenarios. We use
+`zero_aggregate_deficit = TRUE` to reproduce that scenario.
+
+```{r}
+results <- run_cp2015(data = cp2015nafta, zero_aggregate_deficit = TRUE)
+```
+
+The welfare decomposition includes terms of trade, volume of trade, and technical efficiency. The latter is zero in this
+tariff-only example. From the model results, we need to aggregate its outputs in different ways to replicate tables
+two to five.
+
+# Welfare effects from NAFTA's tariff reductions (Table 2)
+
+```{r}
+nafta <- c("Mexico", "Canada", "USA")
+welfare <- results$welfare[region %in% nafta]
+welfare[, tech := NULL]
+welfare <- welfare[match(nafta, region), ]
+
+knitr::kable(
+  welfare,
+  digits = 2,
+  latex = TRUE,
+  col.names = c("Country", "Total", "Terms of trade", "Volume of trade", "Real wages"),
+  caption = "Welfare effects from NAFTA's tariff reductions (Table 2)"
+)
+```
+
+# Bilateral welfare effects from NAFTA's tariff reductions (Table 3)
+
+```{r}
+tot_bilateral <- results$tot[region %in% nafta]
+tot_bilateral[, partner := fifelse(partner %in% nafta, "NAFTA", "ROW")]
+tot_bilateral <- tot_bilateral[, .(ToT = sum(tot)), by = .(region, partner)]
+
+vot_bilateral <- results$vot[region %in% nafta]
+vot_bilateral[, partner := fifelse(partner %in% nafta, "NAFTA", "ROW")]
+vot_bilateral <- vot_bilateral[, .(VoT = sum(vot)), by = .(region, partner)]
+
+bilateral <- merge(
+  tot_bilateral,
+  vot_bilateral,
+  by = c("region", "partner"),
+  all = TRUE,
+  sort = FALSE
+)
+
+bilateral <- dcast(
+  bilateral,
+  region ~ partner,
+  value.var = c("ToT", "VoT")
+)
+
+bilateral <- bilateral[match(nafta, region), ]
+
+knitr::kable(
+  bilateral,
+  digits = 2,
+  latex = TRUE,
+  col.names = c("Country", "ToT NAFTA", "ToT ROW", "VoT NAFTA", "VoT ROW"),
+  caption = "Bilateral welfare effects from NAFTA's tariff reductions
+    (Table 3)"
+)
+```
+
+# Sectoral contribution to welfare effects from NAFTA's tariff reductions (Table 4)
+
+```{r}
+tot_sector <- results$tot[region %in% nafta]
+tot_sector <- tot_sector[, .(ToT = sum(tot)), by = .(region, sector)]
+tot_sector[, ToT := 100 * ToT / sum(ToT), by = region]
+
+vot_sector <- results$vot[region %in% nafta]
+vot_sector <- vot_sector[, .(VoT = sum(vot)), by = .(region, sector)]
+vot_sector[, VoT := 100 * VoT / sum(VoT), by = region]
+
+sectoral <- merge(
+  tot_sector,
+  vot_sector,
+  by = c("region", "sector"),
+  all = TRUE,
+  sort = FALSE
+)
+
+sectoral <- dcast(
+  sectoral,
+  sector ~ region,
+  value.var = c("ToT", "VoT")
+)
+
+setcolorder(
+  sectoral,
+  c("sector", "ToT_Mexico", "VoT_Mexico", "ToT_Canada", "VoT_Canada",
+    "ToT_USA", "VoT_USA")
+)
+
+knitr::kable(
+  sectoral,
+  digits = 2,
+  latex = TRUE,
+  col.names = c("Sector", gsub("_", " ", colnames(sectoral)[-1])),
+  caption = "Sectoral contribution to welfare effects from NAFTA's
+    tariff reductions (Table 4)"
+)
+```
+
+# Trade effects from NAFTA's tariff reductions (Table 5)
+
+```{r}
+trade <- results$trade
+trade <- trade[importer %in% nafta & exporter %in% nafta]
+trade <- trade[, .(trade_bln = sum(trade_bln), trade_cfl = sum(trade_cfl)),
+  by = .(importer, exporter)
+]
+trade[, change := (trade_cfl / trade_bln - 1) * 100]
+trade[exporter == importer, change := NA_real_]
+
+trade <- dcast(
+  trade,
+  importer ~ exporter,
+  value.var = "change"
+)
+
+trade <- trade[match(nafta, importer), ]
+setcolorder(trade, c("importer", "Mexico", "Canada", "USA"))
+
+knitr::kable(
+  trade,
+  digits = 2,
+  latex = TRUE,
+  col.names = c("Importer/Exporter", nafta),
+  caption = "Trade effects from NAFTA's tariff reductions (Table 5)"
+)
+```
+
+# References
