@@ -28,12 +28,12 @@ inline void set_omp_threads_from_config() {
 
 SEXP get_named(SEXP x, const char* name) {
   if (TYPEOF(x) != VECSXP) {
-    cpp4r::stop("Expected a list while looking for '%s'", name);
+    stop("Expected a list while looking for '%s'", name);
   }
 
   SEXP names = Rf_getAttrib(x, R_NamesSymbol);
   if (names == R_NilValue) {
-    cpp4r::stop("Expected a named list while looking for '%s'", name);
+    stop("Expected a named list while looking for '%s'", name);
   }
 
   R_xlen_t n = Rf_xlength(x);
@@ -43,7 +43,7 @@ SEXP get_named(SEXP x, const char* name) {
     }
   }
 
-  cpp4r::stop("List element '%s' not found", name);
+  stop("List element '%s' not found", name);
 }
 
 R_xlen_t find_name(SEXP x, const char* name) {
@@ -60,6 +60,12 @@ R_xlen_t find_name(SEXP x, const char* name) {
   }
 
   return -1;
+}
+
+void check_matrix_dimensions(const Mat<double>& x, int nrow, int ncol, const char* name) {
+  if (x.n_rows != static_cast<uword>(nrow) || x.n_cols != static_cast<uword>(ncol)) {
+    stop("'%s' must have dimensions %d x %d", name, nrow, ncol);
+  }
 }
 
 SEXP make_scalar_real(double value) {
@@ -100,37 +106,17 @@ SEXP append_or_replace_named(SEXP x, const char* name, SEXP value) {
   return out;
 }
 
-// Zero-copy Col<double>/Mat<double> wrapping, delegated to armadillo4r's
-// as_Col()/as_Mat(); only the argument validation stays custom here.
-arma::Col<double> as_arma_col(SEXP x, const char* name) {
-  if (TYPEOF(x) != REALSXP) {
-    cpp4r::stop("'%s' must be a numeric array", name);
-  }
-  return arma::Col<double>(REAL(x), static_cast<arma::uword>(Rf_xlength(x)), false, false);
-}
-
-// Same for matrices
-arma::Mat<double> as_arma_mat(SEXP x, const char* name, int nrow, int ncol) {
-  if (TYPEOF(x) != REALSXP) {
-    cpp4r::stop("'%s' must be a numeric matrix/array", name);
-  }
-  if (Rf_xlength(x) != static_cast<R_xlen_t>(nrow) * ncol) {
-    cpp4r::stop("'%s' has incompatible dimensions", name);
-  }
-  return arma::Mat<double>(REAL(x), nrow, ncol, false, false);
-}
-
 // armadillo4r's as_Cube() only accepts a cpp4r list<doubles_matrix<>>, but our
 // 3D data arrives as a single flat REALSXP array, so a custom zero-copy
 // wrapper is still needed here.
-arma::Cube<double> as_arma_cube(SEXP x, const char* name, int nrow, int ncol, int nslice) {
+Cube<double> as_arma_cube(SEXP x, const char* name, int nrow, int ncol, int nslice) {
   if (TYPEOF(x) != REALSXP) {
-    cpp4r::stop("'%s' must be a numeric array", name);
+    stop("'%s' must be a numeric array", name);
   }
   if (Rf_xlength(x) != static_cast<R_xlen_t>(nrow) * ncol * nslice) {
-    cpp4r::stop("'%s' has incompatible dimensions", name);
+    stop("'%s' has incompatible dimensions", name);
   }
-  return arma::Cube<double>(REAL(x), nrow, ncol, nslice, false, false);
+  return Cube<double>(REAL(x), nrow, ncol, nslice, false, false);
 }
 
 SEXP duplicate_array(SEXP x) {
@@ -152,7 +138,7 @@ SEXP duplicate_array(SEXP x) {
   printed.
 @export
 */
-[[cpp4r::register]] cpp4r::sexp solve_model(cpp4r::sexp data,
+[[cpp4r::register]] sexp solve_model(sexp data,
                                             double ufactor = 0.8,
                                             double tol = 1e-7,
                                             int maxiter = 10000,
@@ -168,34 +154,39 @@ SEXP duplicate_array(SEXP x) {
   const int J = static_cast<int>(Rf_xlength(sectors));
 
   SEXP params = get_named(data_, "parameters");
-  arma::Col<double> theta_j = as_arma_col(get_named(params, "theta_j"), "theta_j");
-  arma::Cube<double> pi_nij0 = as_arma_cube(get_named(params, "pi_nij0"), "pi_nij0", N, N, J);
-  arma::Cube<double> gamma_nkj =
+  Col<double> theta_j = as_col(get_named(params, "theta_j"));
+  Cube<double> pi_nij0 = as_arma_cube(get_named(params, "pi_nij0"), "pi_nij0", N, N, J);
+  Cube<double> gamma_nkj =
       as_arma_cube(get_named(params, "gamma_nkj"), "gamma_nkj", N, J, J);
-  arma::Mat<double> gamma_nj = as_arma_mat(get_named(params, "gamma_nj"), "gamma_nj", N, J);
-  arma::Mat<double> alpha_nj = as_arma_mat(get_named(params, "alpha_nj"), "alpha_nj", N, J);
-  arma::Cube<double> tau_nij0 = as_arma_cube(get_named(params, "tau_nij0"), "tau_nij0", N, N, J);
-  arma::Col<double> wL_n = as_arma_col(get_named(params, "wL_n"), "wL_n");
+  Mat<double> gamma_nj = as_mat(get_named(params, "gamma_nj"));
+  Mat<double> alpha_nj = as_mat(get_named(params, "alpha_nj"));
+  Cube<double> tau_nij0 = as_arma_cube(get_named(params, "tau_nij0"), "tau_nij0", N, N, J);
+  Col<double> wL_n = as_col(get_named(params, "wL_n"));
+  check_matrix_dimensions(gamma_nj, N, J, "gamma_nj");
+  check_matrix_dimensions(alpha_nj, N, J, "alpha_nj");
 
   SEXP vars = get_named(data_, "variables");
-  arma::Mat<double> c_nj_hat = as_arma_mat(get_named(vars, "c_nj_hat"), "c_nj_hat", N, J);
-  arma::Mat<double> P_nj_hat = as_arma_mat(get_named(vars, "P_nj_hat"), "P_nj_hat", N, J);
-  arma::Cube<double> pi_nij1 = as_arma_cube(get_named(vars, "pi_nij1"), "pi_nij1", N, N, J);
-  arma::Mat<double> X_nj1 = as_arma_mat(get_named(vars, "X_nj1"), "X_nj1", N, J);
-  arma::Col<double> I_n1 = as_arma_col(get_named(vars, "I_n1"), "I_n1");
-  arma::Col<double> D_n = as_arma_col(get_named(vars, "D_n"), "D_n");
-  arma::Col<double> w_n_hat = as_arma_col(get_named(vars, "w_n_hat"), "w_n_hat");
-  arma::Cube<double> tau_nij1 = as_arma_cube(get_named(vars, "tau_nij1"), "tau_nij1", N, N, J);
-  arma::Cube<double> d_nij_hat = as_arma_cube(get_named(vars, "d_nij_hat"), "d_nij_hat", N, N, J);
+  Mat<double> c_nj_hat = as_mat(get_named(vars, "c_nj_hat"));
+  Mat<double> P_nj_hat = as_mat(get_named(vars, "P_nj_hat"));
+  Cube<double> pi_nij1 = as_arma_cube(get_named(vars, "pi_nij1"), "pi_nij1", N, N, J);
+  Mat<double> X_nj1 = as_mat(get_named(vars, "X_nj1"));
+  Col<double> I_n1 = as_col(get_named(vars, "I_n1"));
+  Col<double> D_n = as_col(get_named(vars, "D_n"));
+  Col<double> w_n_hat = as_col(get_named(vars, "w_n_hat"));
+  Cube<double> tau_nij1 = as_arma_cube(get_named(vars, "tau_nij1"), "tau_nij1", N, N, J);
+  Cube<double> d_nij_hat = as_arma_cube(get_named(vars, "d_nij_hat"), "d_nij_hat", N, N, J);
+  check_matrix_dimensions(c_nj_hat, N, J, "c_nj_hat");
+  check_matrix_dimensions(P_nj_hat, N, J, "P_nj_hat");
+  check_matrix_dimensions(X_nj1, N, J, "X_nj1");
 
-  arma::Cube<double> kappa_nij_hat(N, N, J, arma::fill::ones);
-  arma::Mat<double> Y_nj1(N, J, arma::fill::zeros);
+  Cube<double> kappa_nij_hat(N, N, J, fill::ones);
+  Mat<double> Y_nj1(N, J, fill::zeros);
   SEXP P_n_hat_sexp = PROTECT(duplicate_array(get_named(vars, "w_n_hat")));
-  arma::Col<double> P_n_hat = as_arma_col(P_n_hat_sexp, "P_n_hat");
+  Col<double> P_n_hat = as_col(P_n_hat_sexp);
 
-  arma::Mat<double> res_c(N, J, arma::fill::zeros);
-  arma::Mat<double> res_X(N, J, arma::fill::zeros);
-  arma::Col<double> res_w(N, arma::fill::zeros);
+  Mat<double> res_c(N, J, fill::zeros);
+  Mat<double> res_X(N, J, fill::zeros);
+  Col<double> res_w(N, fill::zeros);
 
   for (int n = 0; n < N; n++) {
     for (int i = 0; i < N; i++) {
@@ -210,7 +201,7 @@ SEXP duplicate_array(SEXP x) {
   const char* message = "Unsuccessful convergence";
 
   for (int iter = 1; iter <= maxiter; iter++) {
-    cpp4r::check_user_interrupt();
+    check_user_interrupt();
 
 #pragma omp parallel for
     for (int j = 0; j < J; j++) {
@@ -300,15 +291,15 @@ SEXP duplicate_array(SEXP x) {
     }
     res_w(N - 1) = sum1_ / sum2_ - 1;
 
-    norm = std::sqrt(arma::accu(arma::square(res_c)) + arma::accu(arma::square(res_X)) +
-                     arma::accu(arma::square(res_w)));
+    norm = std::sqrt(accu(square(res_c)) + accu(square(res_X)) +
+                     accu(square(res_w)));
 
     if (trace && (iter == 1 || iter % triter == 0)) {
       Rprintf("Iteration: %d - ||F(x)||: %.10g\n", iter, norm);
     }
 
     if (iter == maxiter) {
-      cpp4r::warning("Maximum number of iteration reached before convergence.");
+      warning("Maximum number of iteration reached before convergence.");
       message = "Maximum iteration reached";
       break;
     }
@@ -347,7 +338,7 @@ SEXP duplicate_array(SEXP x) {
   data_ = PROTECT(append_or_replace_named(data_, "convergence_criteria", make_scalar_real(norm)));
   data_ = PROTECT(append_or_replace_named(data_, "message", make_scalar_string(message)));
 
-  cpp4r::sexp out(data_);
+  sexp out(data_);
   UNPROTECT(5);
   return out;
 }
