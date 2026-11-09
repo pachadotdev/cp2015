@@ -1,9 +1,6 @@
-#' Run a simulation using the Caliendo and Parro (2015) quantitative trade model
+#' @title Run a simulation using the Caliendo and Parro (2015) quantitative trade model
 #'
-#' @description
-#'
-#'
-#' Caliendo and Parro (2015) develop a Ricardian quantitative trade model that
+#' @description Caliendo and Parro (2015) develop a Ricardian quantitative trade model that
 #' considers multiple countries and multiple sectors. The model allows interactions
 #' across sectors based on Input-Output linkages.
 #'
@@ -24,9 +21,7 @@
 #' @param triter an integer indicating that information should be printed for each
 #' multiple of that number.
 #'
-#' @return
-#'
-#' A list with 13 elements:
+#' @return A list with 13 elements:
 #'
 #'  * c_nj_hat (changes in cost an input bundle) - a data.table with 3 columns:
 #'    * region

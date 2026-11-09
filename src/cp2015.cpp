@@ -26,176 +26,95 @@ inline void set_omp_threads_from_config() {
 }
 #endif
 
-SEXP get_named(SEXP x, const char* name) {
-  if (TYPEOF(x) != VECSXP) {
-    stop("Expected a list while looking for '%s'", name);
-  }
-
-  SEXP names = Rf_getAttrib(x, R_NamesSymbol);
-  if (names == R_NilValue) {
-    stop("Expected a named list while looking for '%s'", name);
-  }
-
-  R_xlen_t n = Rf_xlength(x);
-  for (R_xlen_t i = 0; i < n; ++i) {
-    if (std::string(CHAR(STRING_ELT(names, i))) == name) {
-      return VECTOR_ELT(x, i);
-    }
-  }
-
-  stop("List element '%s' not found", name);
-}
-
-R_xlen_t find_name(SEXP x, const char* name) {
-  SEXP names = Rf_getAttrib(x, R_NamesSymbol);
-  if (names == R_NilValue) {
-    return -1;
-  }
-
-  R_xlen_t n = Rf_xlength(x);
-  for (R_xlen_t i = 0; i < n; ++i) {
-    if (std::string(CHAR(STRING_ELT(names, i))) == name) {
-      return i;
-    }
-  }
-
-  return -1;
-}
-
 void check_matrix_dimensions(const Mat<double>& x, int nrow, int ncol, const char* name) {
   if (x.n_rows != static_cast<uword>(nrow) || x.n_cols != static_cast<uword>(ncol)) {
     stop("'%s' must have dimensions %d x %d", name, nrow, ncol);
   }
 }
 
-SEXP make_scalar_real(double value) {
-  SEXP out = PROTECT(Rf_allocVector(REALSXP, 1));
-  REAL(out)[0] = value;
-  UNPROTECT(1);
-  return out;
+void check_cube_dimensions(const cube& x, int nrow, int ncol, int nslice,
+                           const char* name) {
+  if (x.n_rows != static_cast<uword>(nrow) ||
+      x.n_cols != static_cast<uword>(ncol) ||
+      x.n_slices != static_cast<uword>(nslice)) {
+    stop("'%s' must have dimensions %d x %d x %d", name, nrow, ncol, nslice);
+  }
 }
 
-SEXP make_scalar_string(const char* value) {
-  SEXP out = PROTECT(Rf_allocVector(STRSXP, 1));
-  SET_STRING_ELT(out, 0, Rf_mkCharCE(value, CE_UTF8));
-  UNPROTECT(1);
-  return out;
+void check_vector_length(const vec& x, int size, const char* name) {
+  if (x.n_elem != static_cast<uword>(size)) {
+    stop("'%s' must have length %d", name, size);
+  }
 }
 
-SEXP append_or_replace_named(SEXP x, const char* name, SEXP value) {
-  R_xlen_t pos = find_name(x, name);
-  if (pos >= 0) {
-    SET_VECTOR_ELT(x, pos, value);
-    return x;
-  }
-
-  R_xlen_t n = Rf_xlength(x);
-  SEXP out = PROTECT(Rf_allocVector(VECSXP, n + 1));
-  SEXP out_names = PROTECT(Rf_allocVector(STRSXP, n + 1));
-  SEXP names = Rf_getAttrib(x, R_NamesSymbol);
-
-  for (R_xlen_t i = 0; i < n; ++i) {
-    SET_VECTOR_ELT(out, i, VECTOR_ELT(x, i));
-    SET_STRING_ELT(out_names, i, STRING_ELT(names, i));
-  }
-
-  SET_VECTOR_ELT(out, n, value);
-  SET_STRING_ELT(out_names, n, Rf_mkCharCE(name, CE_UTF8));
-  Rf_setAttrib(out, R_NamesSymbol, out_names);
-  UNPROTECT(2);
-  return out;
+// The typed converters expose R memory; iteration needs independent working copies.
+mat copy_matrix(const doubles_matrix<>& x) {
+  const mat view = as_mat(x);
+  return mat(view);
 }
 
-// armadillo4r's as_Cube() only accepts a cpp4r list<doubles_matrix<>>, but our
-// 3D data arrives as a single flat REALSXP array, so a custom zero-copy
-// wrapper is still needed here.
-Cube<double> as_arma_cube(SEXP x, const char* name, int nrow, int ncol, int nslice) {
-  if (TYPEOF(x) != REALSXP) {
-    stop("'%s' must be a numeric array", name);
-  }
-  if (Rf_xlength(x) != static_cast<R_xlen_t>(nrow) * ncol * nslice) {
-    stop("'%s' has incompatible dimensions", name);
-  }
-  return Cube<double>(REAL(x), nrow, ncol, nslice, false, false);
-}
-
-SEXP duplicate_array(SEXP x) {
-  return Rf_duplicate(x);
+vec copy_vector(const doubles& x) {
+  const vec view = as_col(x);
+  return vec(view);
 }
 
 }  // namespace
 
-/* roxygen
-@title Solve model
-@param data a List with the model data.
-@param ufactor a double with an update factor number between (0, 1]. This value
-  is used to update the value of variables at each iteration.
-@param tol a double with the tolerance criteria.
-@param maxiter an integer with the number of maximum iterations.
-@param triter an integer indicating that information should be printed for each
-  multiple of that number.
-@param trace a boolean indicating whether convergence information should be
-  printed.
-@export
-*/
-[[cpp4r::register]] sexp solve_model(sexp data,
-                                            double ufactor = 0.8,
-                                            double tol = 1e-7,
-                                            int maxiter = 10000,
-                                            int triter = 100,
-                                            bool trace = true) {
-  SEXP data_ = PROTECT(Rf_duplicate(data.data()));
-
-  SEXP sets = get_named(data_, "sets");
-  SEXP regions = get_named(sets, "regions");
-  SEXP sectors = get_named(sets, "sectors");
-
-  const int N = static_cast<int>(Rf_xlength(regions));
-  const int J = static_cast<int>(Rf_xlength(sectors));
-
-  SEXP params = get_named(data_, "parameters");
-  Col<double> theta_j = as_col(get_named(params, "theta_j"));
-  Cube<double> pi_nij0 = as_arma_cube(get_named(params, "pi_nij0"), "pi_nij0", N, N, J);
-  Cube<double> gamma_nkj =
-      as_arma_cube(get_named(params, "gamma_nkj"), "gamma_nkj", N, J, J);
-  Mat<double> gamma_nj = as_mat(get_named(params, "gamma_nj"));
-  Mat<double> alpha_nj = as_mat(get_named(params, "alpha_nj"));
-  Cube<double> tau_nij0 = as_arma_cube(get_named(params, "tau_nij0"), "tau_nij0", N, N, J);
-  Col<double> wL_n = as_col(get_named(params, "wL_n"));
-  check_matrix_dimensions(gamma_nj, N, J, "gamma_nj");
+[[cpp4r::register]] list solve_model_cpp(
+    doubles theta_j_r, list pi_nij0_r, list gamma_nkj_r,
+    doubles_matrix<> gamma_nj_r, doubles_matrix<> alpha_nj_r,
+    list tau_nij0_r, doubles wL_n_r,
+    doubles_matrix<> c_nj_hat_r, doubles_matrix<> P_nj_hat_r,
+    list pi_nij1_r, doubles_matrix<> X_nj1_r, doubles I_n1_r,
+    doubles D_n_r, doubles w_n_hat_r, list tau_nij1_r, list d_nij_hat_r,
+    double ufactor, double tol, int maxiter, int triter, bool trace) {
+  const vec theta_j = as_col(theta_j_r);
+  const cube pi_nij0 = as_cube(pi_nij0_r);
+  const cube gamma_nkj = as_cube(gamma_nkj_r);
+  const mat gamma_nj = as_mat(gamma_nj_r);
+  const mat alpha_nj = as_mat(alpha_nj_r);
+  const cube tau_nij0 = as_cube(tau_nij0_r);
+  const vec wL_n = as_col(wL_n_r);
+  const int N = gamma_nj.n_rows;
+  const int J = gamma_nj.n_cols;
+  if (N == 0 || J == 0) {
+    stop("The model must have at least one region and sector");
+  }
   check_matrix_dimensions(alpha_nj, N, J, "alpha_nj");
 
-  SEXP vars = get_named(data_, "variables");
-  Mat<double> c_nj_hat = as_mat(get_named(vars, "c_nj_hat"));
-  Mat<double> P_nj_hat = as_mat(get_named(vars, "P_nj_hat"));
-  Cube<double> pi_nij1 = as_arma_cube(get_named(vars, "pi_nij1"), "pi_nij1", N, N, J);
-  Mat<double> X_nj1 = as_mat(get_named(vars, "X_nj1"));
-  Col<double> I_n1 = as_col(get_named(vars, "I_n1"));
-  Col<double> D_n = as_col(get_named(vars, "D_n"));
-  Col<double> w_n_hat = as_col(get_named(vars, "w_n_hat"));
-  Cube<double> tau_nij1 = as_arma_cube(get_named(vars, "tau_nij1"), "tau_nij1", N, N, J);
-  Cube<double> d_nij_hat = as_arma_cube(get_named(vars, "d_nij_hat"), "d_nij_hat", N, N, J);
+  mat c_nj_hat = copy_matrix(c_nj_hat_r);
+  mat P_nj_hat = copy_matrix(P_nj_hat_r);
+  cube pi_nij1 = as_cube(pi_nij1_r);
+  mat X_nj1 = copy_matrix(X_nj1_r);
+  vec I_n1 = copy_vector(I_n1_r);
+  const vec D_n = as_col(D_n_r);
+  vec w_n_hat = copy_vector(w_n_hat_r);
+  const cube tau_nij1 = as_cube(tau_nij1_r);
+  const cube d_nij_hat = as_cube(d_nij_hat_r);
   check_matrix_dimensions(c_nj_hat, N, J, "c_nj_hat");
   check_matrix_dimensions(P_nj_hat, N, J, "P_nj_hat");
   check_matrix_dimensions(X_nj1, N, J, "X_nj1");
+  check_vector_length(theta_j, J, "theta_j");
+  check_vector_length(wL_n, N, "wL_n");
+  check_vector_length(I_n1, N, "I_n1");
+  check_vector_length(D_n, N, "D_n");
+  check_vector_length(w_n_hat, N, "w_n_hat");
+  check_cube_dimensions(pi_nij0, N, N, J, "pi_nij0");
+  check_cube_dimensions(gamma_nkj, N, J, J, "gamma_nkj");
+  check_cube_dimensions(tau_nij0, N, N, J, "tau_nij0");
+  check_cube_dimensions(pi_nij1, N, N, J, "pi_nij1");
+  check_cube_dimensions(tau_nij1, N, N, J, "tau_nij1");
+  check_cube_dimensions(d_nij_hat, N, N, J, "d_nij_hat");
 
   Cube<double> kappa_nij_hat(N, N, J, fill::ones);
   Mat<double> Y_nj1(N, J, fill::zeros);
-  SEXP P_n_hat_sexp = PROTECT(duplicate_array(get_named(vars, "w_n_hat")));
-  Col<double> P_n_hat = as_col(P_n_hat_sexp);
+  vec P_n_hat(N, fill::ones);
 
   Mat<double> res_c(N, J, fill::zeros);
   Mat<double> res_X(N, J, fill::zeros);
   Col<double> res_w(N, fill::zeros);
 
-  for (int n = 0; n < N; n++) {
-    for (int i = 0; i < N; i++) {
-      for (int j = 0; j < J; j++) {
-        kappa_nij_hat(n, i, j) =
-            (1 + tau_nij1(n, i, j)) / (1 + tau_nij0(n, i, j)) * d_nij_hat(n, i, j);
-      }
-    }
-  }
+  kappa_nij_hat = (1 + tau_nij1) / (1 + tau_nij0) % d_nij_hat;
 
   double norm = NA_REAL;
   const char* message = "Unsuccessful convergence";
@@ -312,17 +231,9 @@ SEXP duplicate_array(SEXP x) {
       break;
     }
 
-    for (int j = 0; j < J; j++) {
-      for (int n = 0; n < N; n++) {
-        c_nj_hat(n, j) = c_nj_hat(n, j) - ufactor * res_c(n, j);
-        X_nj1(n, j) =
-            X_nj1(n, j) - ufactor * res_X(n, j) * std::max(X_nj1(n, j), 1.0);
-      }
-    }
-
-    for (int n = 0; n < N; n++) {
-      w_n_hat(n) = w_n_hat(n) - ufactor * res_w(n);
-    }
+    c_nj_hat -= ufactor * res_c;
+    X_nj1 -= ufactor * res_X % clamp(X_nj1, 1.0, datum::inf);
+    w_n_hat -= ufactor * res_w;
   }
 
   for (int n = 0; n < N; n++) {
@@ -333,12 +244,16 @@ SEXP duplicate_array(SEXP x) {
     P_n_hat(n) = prod;
   }
 
-  vars = PROTECT(append_or_replace_named(vars, "P_n_hat", P_n_hat_sexp));
-  SET_VECTOR_ELT(data_, find_name(data_, "variables"), vars);
-  data_ = PROTECT(append_or_replace_named(data_, "convergence_criteria", make_scalar_real(norm)));
-  data_ = PROTECT(append_or_replace_named(data_, "message", make_scalar_string(message)));
-
-  sexp out(data_);
-  UNPROTECT(5);
-  return out;
+  using namespace cpp4r::literals;
+  return writable::list({
+      "variables"_nm = writable::list({
+          "c_nj_hat"_nm = as_doubles_matrix(c_nj_hat),
+          "P_nj_hat"_nm = as_doubles_matrix(P_nj_hat),
+          "pi_nij1"_nm = as_doubles_matrix_list(pi_nij1),
+          "X_nj1"_nm = as_doubles_matrix(X_nj1),
+          "I_n1"_nm = as_doubles(I_n1),
+          "w_n_hat"_nm = as_doubles(w_n_hat),
+          "P_n_hat"_nm = as_doubles(P_n_hat)}),
+      "convergence_criteria"_nm = norm,
+      "message"_nm = message});
 }

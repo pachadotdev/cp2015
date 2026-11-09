@@ -13,27 +13,23 @@ df_to_array <- function(df, indexes) {
   names_num <- names(df)[sapply(df, is.numeric)]
   setorderv(df, rev(indexes_names))
   a <- array(df[[names_num]], dim = set_sizes, dimnames = indexes)
-  # if (length(dim(a)) == 1) {
-  #   a <- as.vector(a)
-  #   names(a) <- indexes[[1]]
-  # }
-  # if (length(dim(a)) == 2) {
-  #   a <- as.matrix(a)
-  # }
   a
 }
 
 create_array <- function(value = 1, indexes) {
   set_sizes <- sapply(indexes, function(x) length(x))
   a <- array(value, dim = set_sizes, dimnames = indexes)
-  # if (length(dim(a)) == 1) {
-  #   a <- as.vector(a)
-  #   names(a) <- indexes[[1]]
-  # }
-  # if (length(dim(a)) == 2) {
-  #   a <- as.matrix(a)
-  # }
   a
+}
+
+array_to_matrices <- function(x) {
+  dims <- dim(x)
+  if (length(dims) != 3L || any(dims == 0L)) {
+    stop("Expected a non-empty three-dimensional array", call. = FALSE)
+  }
+  lapply(seq_len(dims[3L]), function(j) {
+    matrix(x[, , j], nrow = dims[1L], ncol = dims[2L])
+  })
 }
 
 array_to_df <- function(array) {

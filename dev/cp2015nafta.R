@@ -16,7 +16,16 @@ read_matrix <- function(file) {
   as.matrix(values[, lapply(.SD, as.numeric)])
 }
 
+url <- "https://oup.silverchair-cdn.com/oup/backfile/Content_public/Journal/restud/82/1/10.1093/restud/rdu035/3/rdu035-Supplementary.zip?Expires=1797250641&Signature=Y5Y3XkFpGnU7ysNjdJ79589vrlKrByVlge8VARXL5J-leqN3vrXSDV00U~S1xD4vxM8fWri1BZ3hHg4OsN2MN4DO5Es6YDQ1CHVxTzM-hsxMM29IyysCsNOkysxbGbOJ5T-Oeo8vUvpzuy08Bo37F9zOxjnDDCtpJ8SiJvFEMiIEFqVAHK9PzCwwpkVv-n93--LyW4HoxVv3CnmX~kdH3DdizhrWXg10Hqt~agBH0bvRI3UfTPa6vToKSKzwH4oP5BmxhLzP77ykKaKkRQmBcngRGnZpOlHudUZXp9GzK6cwKD87PhDPwLN4MHv~JRdEzfDEvMqnrS1SnvfOmmGQug__&Key-Pair-Id=APKAIE5G5CRDK6RD3PGA"
+zip <- "dev/supplementary-data.zip"
+
 source_dir <- file.path("dev", "Supplementary", "Equilibrium")
+
+if (!file.exists(zip)) {
+  download.file(url, zip)
+} else if (!file.exists(source_dir)){
+  unzip(zip, exdir = "dev")
+}
 
 required_files <- c(
   "IO.txt", "B.txt", "GO.txt", "xbilat1993.txt",
@@ -55,6 +64,10 @@ sets <- list(
   sectors = sectors
 )
 
+N <- length(regions)
+J <- length(sectors)
+J_trade <- 20L
+
 io <- read_matrix(file.path(source_dir, "IO.txt"))
 value_added_share <- read_matrix(file.path(source_dir, "B.txt"))
 gross_output <- read_matrix(file.path(source_dir, "GO.txt"))
@@ -65,31 +78,26 @@ alphas <- R.matlab::readMat(file.path(source_dir, "alphas.mat"))$alphas
 
 theta_values <- c(
   as.numeric(read_matrix(file.path(source_dir, "T.txt"))),
-  rep(8.22, length(sectors) - 20L)
+  rep(8.22, J - J_trade)
 )
 
 stopifnot(
-  identical(dim(io), c(40L * 31L, 40L)),
-  identical(dim(value_added_share), c(40L, 31L)),
-  identical(dim(gross_output), c(40L, 31L)),
-  identical(dim(trade_1993), c(20L * 31L, 31L)),
+  identical(dim(io), c(J * N, J)),
+  identical(dim(value_added_share), c(J, N)),
+  identical(dim(gross_output), c(J, N)),
+  identical(dim(trade_1993), c(J_trade * N, N)),
   identical(dim(tariff_1993), dim(trade_1993)),
   identical(dim(tariff_2005), dim(trade_1993)),
-  identical(dim(alphas), c(40L, 31L))
+  identical(dim(alphas), c(J, N))
 )
 
 # The original MATLAB scripts replace reported gross output with observed
 # sectoral sales whenever the latter are larger.
-observed_sales <- matrix(0, nrow = length(sectors), ncol = length(regions))
-
-observed_sales[seq_len(20L), ] <- do.call(rbind, lapply(
-  seq_len(20L),
-  function(sector_index) {
-    rows <- ((sector_index - 1L) * length(regions) + 1L):
-      (sector_index * length(regions))
-    colSums(trade_1993[rows, , drop = FALSE])
-  }
-))
+observed_sales <- matrix(0, nrow = J, ncol = N)
+for (j in seq_len(J_trade)) {
+  rows <- ((j - 1L) * N + 1L):(j * N)
+  observed_sales[j, ] <- colSums(trade_1993[rows, , drop = FALSE])
+}
 
 gross_output <- pmax(gross_output, observed_sales)
 
@@ -98,7 +106,7 @@ gross_output <- pmax(gross_output, observed_sales)
 # IO.txt contains one 40-by-40 table per country, with destination sectors
 # in rows and input sectors in columns.
 intermediate_consumption <- rbindlist(lapply(seq_along(regions), function(region_index) {
-  destination_rows <- ((region_index - 1L) * 40L + 1L):(region_index * 40L)
+  destination_rows <- ((region_index - 1L) * J + 1L):(region_index * J)
   values <- sweep(
     io[destination_rows, , drop = FALSE],
     2L,
@@ -106,8 +114,8 @@ intermediate_consumption <- rbindlist(lapply(seq_along(regions), function(region
     `*`
   )
   data.table(
-    input = rep(sectors, times = 40L),
-    sector = rep(sectors, each = 40L),
+    input = rep(sectors, times = J),
+    sector = rep(sectors, each = J),
     region = regions[region_index],
     value = as.vector(values)
   )
@@ -118,8 +126,8 @@ setorder(intermediate_consumption, input, sector, region)
 # Value added ----
 
 value_added <- data.table(
-  sector = rep(sectors, each = 31L),
-  region = rep(regions, times = 40L),
+  sector = rep(sectors, each = N),
+  region = rep(regions, times = J),
   value = as.vector(t(gross_output * value_added_share))
 )
 
@@ -129,13 +137,13 @@ value_added <- data.table(
 # Trade ----
 
 nafta <- c("Canada", "Mexico", "USA")
-tariff <- rbind(tariff_1993, matrix(0, nrow = 20L * 31L, ncol = 31L))
+tariff <- rbind(tariff_1993, matrix(0, nrow = (J - J_trade) * N, ncol = N))
 tariff_cfl <- tariff
-tariff_cfl[seq_len(20L * 31L), ] <- tariff_2005
-trade_values <- rbind(trade_1993, matrix(0, nrow = 20L * 31L, ncol = 31L))
+tariff_cfl[seq_len(J_trade * N), ] <- tariff_2005
+trade_values <- rbind(trade_1993, matrix(0, nrow = (J - J_trade) * N, ncol = N))
 
 trade <- rbindlist(lapply(seq_along(sectors), function(sector_index) {
-  rows <- ((sector_index - 1L) * 31L + 1L):(sector_index * 31L)
+  rows <- ((sector_index - 1L) * N + 1L):(sector_index * N)
   gross_trade <- trade_values[rows, , drop = FALSE] * (1 + tariff[rows, ])
   domestic_sales <- gross_output[sector_index, ] -
     colSums(gross_trade / (1 + tariff[rows, ]))
@@ -143,8 +151,8 @@ trade <- rbindlist(lapply(seq_along(sectors), function(sector_index) {
   net_trade <- gross_trade / (1 + tariff[rows, ])
   data.table(
     sector = sectors[sector_index],
-    exporter = rep(regions, times = 31L),
-    importer = rep(regions, each = 31L),
+    exporter = rep(regions, times = N),
+    importer = rep(regions, each = N),
     value = as.vector(t(net_trade)),
     tariff = as.vector(t(tariff[rows, ])),
     tariff_bln = as.vector(t(tariff[rows, ])),
@@ -183,8 +191,8 @@ expenditure <- merge(expenditure, tariff_revenue, by = "region")
 expenditure[, value := value_added + D + tariff_revenue]
 
 final_consumption <- data.table(
-  sector = rep(sectors, each = 31L),
-  region = rep(regions, times = 40L),
+  sector = rep(sectors, each = N),
+  region = rep(regions, times = J),
   value = as.vector(t(sweep(
     alphas, 2L, expenditure$value[match(regions, expenditure$region)], `*`
   )))

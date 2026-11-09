@@ -7,16 +7,16 @@
 #include <R_ext/Visibility.h>
 
 // cp2015.cpp
-sexp solve_model(sexp data, double ufactor, double tol, int maxiter, int triter, bool trace);
-extern "C" SEXP _cp2015_solve_model(SEXP data, SEXP ufactor, SEXP tol, SEXP maxiter, SEXP triter, SEXP trace) {
+list solve_model_cpp(doubles theta_j_r, list pi_nij0_r, list gamma_nkj_r, doubles_matrix<> gamma_nj_r, doubles_matrix<> alpha_nj_r, list tau_nij0_r, doubles wL_n_r, doubles_matrix<> c_nj_hat_r, doubles_matrix<> P_nj_hat_r, list pi_nij1_r, doubles_matrix<> X_nj1_r, doubles I_n1_r, doubles D_n_r, doubles w_n_hat_r, list tau_nij1_r, list d_nij_hat_r, double ufactor, double tol, int maxiter, int triter, bool trace);
+extern "C" SEXP _cp2015_solve_model_cpp(SEXP theta_j_r, SEXP pi_nij0_r, SEXP gamma_nkj_r, SEXP gamma_nj_r, SEXP alpha_nj_r, SEXP tau_nij0_r, SEXP wL_n_r, SEXP c_nj_hat_r, SEXP P_nj_hat_r, SEXP pi_nij1_r, SEXP X_nj1_r, SEXP I_n1_r, SEXP D_n_r, SEXP w_n_hat_r, SEXP tau_nij1_r, SEXP d_nij_hat_r, SEXP ufactor, SEXP tol, SEXP maxiter, SEXP triter, SEXP trace) {
   BEGIN_CPP4R
-    return cpp4r::as_sexp(solve_model(cpp4r::as_cpp<cpp4r::decay_t<sexp>>(data), cpp4r::as_cpp<cpp4r::decay_t<double>>(ufactor), cpp4r::as_cpp<cpp4r::decay_t<double>>(tol), cpp4r::as_cpp<cpp4r::decay_t<int>>(maxiter), cpp4r::as_cpp<cpp4r::decay_t<int>>(triter), cpp4r::as_cpp<cpp4r::decay_t<bool>>(trace)));
+    return cpp4r::as_sexp(solve_model_cpp(cpp4r::as_cpp<cpp4r::decay_t<doubles>>(theta_j_r), cpp4r::as_cpp<cpp4r::decay_t<list>>(pi_nij0_r), cpp4r::as_cpp<cpp4r::decay_t<list>>(gamma_nkj_r), cpp4r::as_cpp<cpp4r::decay_t<doubles_matrix<>>>(gamma_nj_r), cpp4r::as_cpp<cpp4r::decay_t<doubles_matrix<>>>(alpha_nj_r), cpp4r::as_cpp<cpp4r::decay_t<list>>(tau_nij0_r), cpp4r::as_cpp<cpp4r::decay_t<doubles>>(wL_n_r), cpp4r::as_cpp<cpp4r::decay_t<doubles_matrix<>>>(c_nj_hat_r), cpp4r::as_cpp<cpp4r::decay_t<doubles_matrix<>>>(P_nj_hat_r), cpp4r::as_cpp<cpp4r::decay_t<list>>(pi_nij1_r), cpp4r::as_cpp<cpp4r::decay_t<doubles_matrix<>>>(X_nj1_r), cpp4r::as_cpp<cpp4r::decay_t<doubles>>(I_n1_r), cpp4r::as_cpp<cpp4r::decay_t<doubles>>(D_n_r), cpp4r::as_cpp<cpp4r::decay_t<doubles>>(w_n_hat_r), cpp4r::as_cpp<cpp4r::decay_t<list>>(tau_nij1_r), cpp4r::as_cpp<cpp4r::decay_t<list>>(d_nij_hat_r), cpp4r::as_cpp<cpp4r::decay_t<double>>(ufactor), cpp4r::as_cpp<cpp4r::decay_t<double>>(tol), cpp4r::as_cpp<cpp4r::decay_t<int>>(maxiter), cpp4r::as_cpp<cpp4r::decay_t<int>>(triter), cpp4r::as_cpp<cpp4r::decay_t<bool>>(trace)));
   END_CPP4R
 }
 
 extern "C" {
 static const R_CallMethodDef CallEntries[] = {
-    {"_cp2015_solve_model", (DL_FUNC) &_cp2015_solve_model, 6},
+    {"_cp2015_solve_model_cpp", (DL_FUNC) &_cp2015_solve_model_cpp, 21},
     {NULL, NULL, 0}
 };
 }

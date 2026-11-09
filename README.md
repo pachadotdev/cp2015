@@ -16,6 +16,10 @@ remotes::install_github("pachadotdev/cp2015")
 This port uses `data.table` for data preparation and result aggregation, and `armadillo4r`/`cpp4r` for the numerical
 solver. It no longer depends on `dplyr`, `magrittr`, `Rcpp`, or `xtensor`.
 
+R handles table preparation and labels. The C++ solver receives numeric vectors,
+matrices, and lists of matrices (one per cube slice), then works with Armadillo
+vectors, matrices, and cubes. No custom SEXP manipulation is needed.
+
 ## Example
 
 This replicates the simulation presented in the subsection 5.1 of the article
